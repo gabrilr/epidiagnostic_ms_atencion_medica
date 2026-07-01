@@ -1,0 +1,32 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: atencion_medica_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: atencion_medica_db
+    ports:
+      - "3308:3306" # puerto distinto al de MS2 (3308) para correr ambos a la vez
+    volumes:
+      - atencion_medica_db_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: ms_atencion_medica_api
+    env_file:
+      - .env
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/code
+
+volumes:
+  atencion_medica_db_data:
