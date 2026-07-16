@@ -7,29 +7,34 @@ sea visible también en la capa de entrada, no solo en application/.
 """
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.application.dtos.atencion_command_dto import (
     CrearAtencionInputDTO,
     MedicamentoInputDTO,
+    ModificarAtencionInputDTO,
     SincronizarAtencionesInputDTO,
 )
 from app.application.commands.handlers.crear_atencion_handler import CrearAtencionUseCase
+from app.application.commands.handlers.modificar_atencion_handler import ModificarAtencionUseCase
 from app.application.commands.handlers.sincronizar_atenciones_handler import (
     SincronizarAtencionesBatchUseCase,
 )
-from app.domain.exceptions.domain_exceptions import EvidenciaInvalidaException
+from app.domain.exceptions.domain_exceptions import AtencionNoEncontradaException, EvidenciaInvalidaException
 from app.infrastructure.adapters.input.api.atencion_schemas import (
     AtencionResponse,
     CrearAtencionRequest,
     MedicamentoResponse,
+    ModificarAtencionRequest,
     ResultadoSincronizacionAtencionResponse,
     SincronizarAtencionesRequest,
     SincronizarAtencionesResponse,
 )
 from app.infrastructure.dependency_injection import (
     get_crear_atencion_use_case,
+    get_modificar_atencion_use_case,
     get_sincronizar_atenciones_batch_use_case,
 )
 
@@ -106,12 +111,34 @@ async def sincronizar_atenciones(
     )
 
 
-# ---------------------------------------------------------------------
-# TODO: Endpoint pendiente (ver modificar_atencion_handler.py, ya
-# documentado con TODO detallado):
-#
-# @router.patch("/{atencion_id}", response_model=AtencionResponse, ...)
-#     -> usa ModificarAtencionUseCase
-#     -> requiere schema ModificarAtencionRequest en atencion_schemas.py
-#        (todos los campos opcionales, ya que es un PATCH parcial)
-# ---------------------------------------------------------------------
+@router.patch(
+    "/{atencion_id}",
+    response_model=AtencionResponse,
+    summary="Corrige diagnóstico y/o evidencia de una atención existente.",
+)
+async def modificar_atencion(
+    atencion_id: UUID,
+    request: ModificarAtencionRequest,
+    use_case: Annotated[ModificarAtencionUseCase, Depends(get_modificar_atencion_use_case)],
+) -> AtencionResponse:
+    """
+    PATCH parcial: solo se modifica lo que venga en el body distinto de
+    null. A diferencia del historial médico de MS1 (append-only), la
+    evidencia de receta aquí se REEMPLAZA si ya existía una.
+    """
+    try:
+        input_dto = ModificarAtencionInputDTO(
+            motivo_consulta=request.motivo_consulta,
+            diagnostico_descripcion=request.diagnostico_descripcion,
+            evidencia_receta_base64=request.evidencia_receta_base64,
+        )
+        resultado = await use_case.ejecutar(atencion_id, input_dto)
+        return AtencionResponse(
+            **{**resultado.__dict__, "medicamentos": [MedicamentoResponse(**m.__dict__) for m in resultado.medicamentos]}
+        )
+    except AtencionNoEncontradaException as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error))
+    except EvidenciaInvalidaException as error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error))

@@ -11,6 +11,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.commands.handlers.crear_atencion_handler import CrearAtencionUseCase
+from app.application.commands.handlers.modificar_atencion_handler import ModificarAtencionUseCase
 from app.application.commands.handlers.sincronizar_atenciones_handler import (
     SincronizarAtencionesBatchUseCase,
 )
@@ -90,6 +91,13 @@ def get_sincronizar_atenciones_batch_use_case(
     return SincronizarAtencionesBatchUseCase(crear_atencion_use_case)
 
 
+def get_modificar_atencion_use_case(
+    atencion_repository: Annotated[AtencionCommandRepository, Depends(get_atencion_command_repository)],
+    evidencia_storage: Annotated[EvidenciaStoragePort, Depends(get_evidencia_storage)],
+) -> ModificarAtencionUseCase:
+    return ModificarAtencionUseCase(atencion_repository, evidencia_storage)
+
+
 def get_listar_atenciones_paciente_use_case(
     query_repository: Annotated[AtencionQueryRepository, Depends(get_atencion_query_repository)],
 ) -> ListarAtencionesPorPacienteUseCase:
@@ -106,6 +114,3 @@ def get_obtener_detalle_atencion_use_case(
 # una vez implementado su handler (listar_atenciones_personal_handler.py),
 # siguiendo exactamente el mismo patrón que
 # get_listar_atenciones_paciente_use_case.
-#
-# TODO: agregar también la dependencia de ModificarAtencionUseCase una
-# vez implementado modificar_atencion_handler.py.

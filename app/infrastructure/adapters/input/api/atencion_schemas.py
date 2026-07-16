@@ -82,3 +82,13 @@ class ResultadoSincronizacionAtencionResponse(BaseModel):
 
 class SincronizarAtencionesResponse(BaseModel):
     resultados: list[ResultadoSincronizacionAtencionResponse]
+
+
+class ModificarAtencionRequest(BaseModel):
+    """Todos los campos son opcionales: PATCH parcial, solo se modifica lo que venga."""
+    motivo_consulta: str | None = Field(default=None, min_length=1, max_length=500)
+    diagnostico_descripcion: str | None = Field(default=None, max_length=1000)
+    evidencia_receta_base64: str | None = Field(
+        default=None,
+        description="Reemplaza la evidencia existente (si ya había una) o la agrega si no había.",
+    )
