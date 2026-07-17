@@ -28,6 +28,8 @@ from app.domain.entities.medicamento import Medicamento
 from app.domain.repositories.atencion_query_repository import AtencionQueryRepository
 from app.domain.value_objects.diagnostico import Diagnostico
 from app.domain.value_objects.estado_atencion import EstadoAtencion
+from app.domain.value_objects.signos_vitales import SignosVitales
+from app.domain.value_objects.ubicacion import Ubicacion
 from app.infrastructure.adapters.output.persistence.models.atencion_model import AtencionModel
 
 
@@ -70,8 +72,10 @@ class AtencionQueryRepositoryImpl(AtencionQueryRepository):
             diagnostico=Diagnostico(
                 motivo_consulta=modelo.motivo_consulta,
                 descripcion=modelo.diagnostico_descripcion,
+                dias_evolucion_sintomas=modelo.dias_evolucion_sintomas,
             ),
             fecha_atencion=modelo.fecha_atencion,
+            ubicacion=Ubicacion(comunidad=modelo.comunidad, municipio=modelo.municipio),
             device_generated_id=modelo.device_generated_id,
             estado=EstadoAtencion(modelo.estado),
             medicamentos=[
@@ -87,5 +91,28 @@ class AtencionQueryRepositoryImpl(AtencionQueryRepository):
                 url_imagen=modelo.evidencia.url_imagen,
                 public_id_cloudinary=modelo.evidencia.public_id_cloudinary,
                 fecha_captura=modelo.evidencia.fecha_captura,
+            )
+        if any(
+            v is not None
+            for v in (
+                modelo.presion_sistolica,
+                modelo.presion_diastolica,
+                modelo.temperatura,
+                modelo.peso,
+                modelo.estatura,
+                modelo.glucosa,
+                modelo.frecuencia_cardiaca,
+                modelo.saturacion_oxigeno,
+            )
+        ):
+            atencion.signos_vitales = SignosVitales(
+                presion_sistolica=modelo.presion_sistolica,
+                presion_diastolica=modelo.presion_diastolica,
+                temperatura=modelo.temperatura,
+                peso=modelo.peso,
+                estatura=modelo.estatura,
+                glucosa=modelo.glucosa,
+                frecuencia_cardiaca=modelo.frecuencia_cardiaca,
+                saturacion_oxigeno=modelo.saturacion_oxigeno,
             )
         return atencion

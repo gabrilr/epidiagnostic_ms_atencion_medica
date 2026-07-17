@@ -20,10 +20,15 @@ class PersonalValidadoDTO:
 class PersonalClientPort(ABC):
 
     @abstractmethod
-    async def obtener_personal(self, personal_id: UUID) -> PersonalValidadoDTO | None:
+    async def obtener_personal(self, personal_id: UUID, bearer_token: str) -> PersonalValidadoDTO | None:
         """
+        `bearer_token`: ver docstring de PacienteClientPort.obtener_paciente
+        — se reenvía tal cual a MS1 en vez de que MS2 tenga su propia
+        identidad de servicio.
+
         Devuelve None si MS1 confirma que el personal NO existe (HTTP 404).
         Lanza ServicioExternoNoDisponibleException si MS1 no responde.
+        Lanza CredencialesInvalidasException si MS1 responde 401.
 
         Nota: este método devuelve el personal aunque esté inactivo
         (activo=False); es responsabilidad de quien llama (el caso de uso

@@ -22,19 +22,31 @@ class ObtenerDetalleAtencionUseCase:
         if atencion is None:
             raise AtencionNoEncontradaException(str(atencion_id))
 
+        sv = atencion.signos_vitales
         return AtencionDetalleDTO(
             id=str(atencion.id),
             paciente_id=str(atencion.paciente_id),
             personal_id=str(atencion.personal_id),
             motivo_consulta=atencion.diagnostico.motivo_consulta,
             diagnostico_descripcion=atencion.diagnostico.descripcion,
+            dias_evolucion_sintomas=atencion.diagnostico.dias_evolucion_sintomas,
             fecha_atencion=atencion.fecha_atencion,
+            comunidad=atencion.ubicacion.comunidad,
+            municipio=atencion.ubicacion.municipio,
             estado=atencion.estado.value,
             medicamentos=[
                 MedicamentoOutputDTO(nombre=m.nombre, dosis=m.dosis, frecuencia=m.frecuencia, duracion=m.duracion)
                 for m in atencion.medicamentos
             ],
             evidencia_url=atencion.evidencia_receta.url_imagen if atencion.evidencia_receta else None,
+            presion_sistolica=sv.presion_sistolica if sv else None,
+            presion_diastolica=sv.presion_diastolica if sv else None,
+            temperatura=sv.temperatura if sv else None,
+            peso=sv.peso if sv else None,
+            estatura=sv.estatura if sv else None,
+            glucosa=sv.glucosa if sv else None,
+            frecuencia_cardiaca=sv.frecuencia_cardiaca if sv else None,
+            saturacion_oxigeno=sv.saturacion_oxigeno if sv else None,
             creado_en=atencion.creado_en,
             actualizado_en=atencion.actualizado_en,
         )

@@ -14,9 +14,23 @@ CREATE TABLE IF NOT EXISTS atenciones (
     personal_id CHAR(36) NOT NULL,
     motivo_consulta VARCHAR(500) NOT NULL,
     diagnostico_descripcion VARCHAR(1000) DEFAULT NULL,
+    dias_evolucion_sintomas INT DEFAULT NULL,
     fecha_atencion DATETIME NOT NULL,
+    -- Dónde se realizó la atención (no necesariamente donde vive el
+    -- paciente ni donde está asignado el personal, ver Ubicacion en el dominio).
+    comunidad VARCHAR(255) NOT NULL,
+    municipio VARCHAR(255) NOT NULL,
     estado VARCHAR(30) NOT NULL DEFAULT 'registrada',
     device_generated_id VARCHAR(36) DEFAULT NULL,
+    -- Signos vitales: todos opcionales, se captura lo que se pueda medir.
+    presion_sistolica INT DEFAULT NULL,
+    presion_diastolica INT DEFAULT NULL,
+    temperatura FLOAT DEFAULT NULL,
+    peso FLOAT DEFAULT NULL,
+    estatura FLOAT DEFAULT NULL,
+    glucosa FLOAT DEFAULT NULL,
+    frecuencia_cardiaca INT DEFAULT NULL,
+    saturacion_oxigeno INT DEFAULT NULL,
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id)

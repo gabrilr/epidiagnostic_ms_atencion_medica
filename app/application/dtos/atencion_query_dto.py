@@ -37,9 +37,20 @@ class AtencionDetalleDTO:
     personal_id: str
     motivo_consulta: str
     diagnostico_descripcion: str | None
+    dias_evolucion_sintomas: int | None
     fecha_atencion: datetime
+    comunidad: str
+    municipio: str
     estado: str
     medicamentos: list[MedicamentoOutputDTO]
     evidencia_url: str | None
+    presion_sistolica: int | None
+    presion_diastolica: int | None
+    temperatura: float | None
+    peso: float | None
+    estatura: float | None
+    glucosa: float | None
+    frecuencia_cardiaca: int | None
+    saturacion_oxigeno: int | None
     creado_en: datetime
     actualizado_en: datetime

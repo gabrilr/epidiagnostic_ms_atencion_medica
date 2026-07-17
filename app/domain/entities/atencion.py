@@ -21,6 +21,8 @@ from app.domain.entities.evidencia_receta import EvidenciaReceta
 from app.domain.entities.medicamento import Medicamento
 from app.domain.value_objects.diagnostico import Diagnostico
 from app.domain.value_objects.estado_atencion import EstadoAtencion
+from app.domain.value_objects.signos_vitales import SignosVitales
+from app.domain.value_objects.ubicacion import Ubicacion
 
 
 @dataclass
@@ -29,11 +31,13 @@ class Atencion:
     personal_id: uuid.UUID
     diagnostico: Diagnostico
     fecha_atencion: datetime
+    ubicacion: Ubicacion  # dónde se realizó la atención, no necesariamente donde vive el paciente
     id: uuid.UUID = field(default_factory=uuid.uuid4)
     device_generated_id: str | None = None  # trazabilidad del celular, no es clave de negocio
     estado: EstadoAtencion = EstadoAtencion.REGISTRADA
     medicamentos: list[Medicamento] = field(default_factory=list)
     evidencia_receta: EvidenciaReceta | None = None
+    signos_vitales: SignosVitales | None = None
     creado_en: datetime = field(default_factory=datetime.utcnow)
     actualizado_en: datetime = field(default_factory=datetime.utcnow)
 

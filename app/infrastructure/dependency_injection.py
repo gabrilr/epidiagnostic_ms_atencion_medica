@@ -21,6 +21,9 @@ from app.application.ports.personal_client_port import PersonalClientPort
 from app.application.queries.handlers.listar_atenciones_paciente_handler import (
     ListarAtencionesPorPacienteUseCase,
 )
+from app.application.queries.handlers.listar_atenciones_personal_handler import (
+    ListarAtencionesPorPersonalUseCase,
+)
 from app.application.queries.handlers.obtener_detalle_atencion_handler import (
     ObtenerDetalleAtencionUseCase,
 )
@@ -110,7 +113,7 @@ def get_obtener_detalle_atencion_use_case(
     return ObtenerDetalleAtencionUseCase(query_repository)
 
 
-# TODO: agregar aquí la dependencia de ListarAtencionesPorPersonalUseCase
-# una vez implementado su handler (listar_atenciones_personal_handler.py),
-# siguiendo exactamente el mismo patrón que
-# get_listar_atenciones_paciente_use_case.
+def get_listar_atenciones_personal_use_case(
+    query_repository: Annotated[AtencionQueryRepository, Depends(get_atencion_query_repository)],
+) -> ListarAtencionesPorPersonalUseCase:
+    return ListarAtencionesPorPersonalUseCase(query_repository)

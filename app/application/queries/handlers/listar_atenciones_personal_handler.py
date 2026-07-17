@@ -1,13 +1,18 @@
 """
 Query: ListarAtencionesPorPersonalQuery (handler)
 
-TODO: Implementar el endpoint GET /atenciones/personal/{personal_id}
+Implementa GET /atenciones/personal/{personal_id}. Caso de uso típico:
+un médico/enfermera revisando cuántas atenciones ha registrado, útil
+para reportes o auditoría de actividad por personal.
+"""
+from uuid import UUID
 
-Sigue EXACTAMENTE el mismo patrón que
-listar_atenciones_paciente_handler.py, solo cambiando el método del
-repositorio:
+from app.application.dtos.atencion_query_dto import AtencionListadoDTO
+from app.domain.repositories.atencion_query_repository import AtencionQueryRepository
+
 
 class ListarAtencionesPorPersonalUseCase:
+
     def __init__(self, query_repository: AtencionQueryRepository):
         self._query_repository = query_repository
 
@@ -25,7 +30,3 @@ class ListarAtencionesPorPersonalUseCase:
             )
             for a in atenciones
         ]
-
-Caso de uso típico: un médico/enfermera revisando cuántas atenciones ha
-registrado, útil para reportes o auditoría de actividad por personal.
-"""

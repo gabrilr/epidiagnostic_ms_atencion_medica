@@ -19,10 +19,21 @@ class CrearAtencionInputDTO:
     personal_id: str
     motivo_consulta: str
     fecha_atencion: datetime
+    comunidad: str
+    municipio: str
     diagnostico_descripcion: str | None = None
+    dias_evolucion_sintomas: int | None = None
     medicamentos: list[MedicamentoInputDTO] = field(default_factory=list)
     evidencia_receta_base64: str | None = None
     device_generated_id: str | None = None
+    presion_sistolica: int | None = None
+    presion_diastolica: int | None = None
+    temperatura: float | None = None
+    peso: float | None = None
+    estatura: float | None = None
+    glucosa: float | None = None
+    frecuencia_cardiaca: int | None = None
+    saturacion_oxigeno: int | None = None
 
 
 @dataclass
@@ -32,10 +43,21 @@ class AtencionOutputDTO:
     personal_id: str
     motivo_consulta: str
     diagnostico_descripcion: str | None
+    dias_evolucion_sintomas: int | None
     fecha_atencion: datetime
+    comunidad: str
+    municipio: str
     estado: str
     medicamentos: list[MedicamentoInputDTO]
     evidencia_url: str | None
+    presion_sistolica: int | None
+    presion_diastolica: int | None
+    temperatura: float | None
+    peso: float | None
+    estatura: float | None
+    glucosa: float | None
+    frecuencia_cardiaca: int | None
+    saturacion_oxigeno: int | None
     creado_en: datetime
     actualizado_en: datetime
 

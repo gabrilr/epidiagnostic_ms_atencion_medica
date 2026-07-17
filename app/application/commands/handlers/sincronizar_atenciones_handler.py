@@ -29,13 +29,13 @@ class SincronizarAtencionesBatchUseCase:
         self._crear_atencion_use_case = crear_atencion_use_case
 
     async def ejecutar(
-        self, datos: SincronizarAtencionesInputDTO
+        self, datos: SincronizarAtencionesInputDTO, bearer_token: str
     ) -> list[ResultadoSincronizacionAtencionDTO]:
         resultados: list[ResultadoSincronizacionAtencionDTO] = []
 
         for atencion_input in datos.atenciones:
             try:
-                resultado = await self._crear_atencion_use_case.ejecutar(atencion_input)
+                resultado = await self._crear_atencion_use_case.ejecutar(atencion_input, bearer_token)
                 resultados.append(
                     ResultadoSincronizacionAtencionDTO(
                         device_generated_id=atencion_input.device_generated_id,

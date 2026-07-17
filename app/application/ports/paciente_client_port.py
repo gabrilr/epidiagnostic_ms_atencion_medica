@@ -27,11 +27,18 @@ class PacienteValidadoDTO:
 class PacienteClientPort(ABC):
 
     @abstractmethod
-    async def obtener_paciente(self, paciente_id: UUID) -> PacienteValidadoDTO | None:
+    async def obtener_paciente(self, paciente_id: UUID, bearer_token: str) -> PacienteValidadoDTO | None:
         """
+        `bearer_token` es la credencial del personal médico que originó
+        la petición a MS2 — se reenvía tal cual a MS1, porque ese
+        endpoint también exige Bearer y MS2 no tiene identidad de
+        servicio propia (ver docstring de PacienteClient).
+
         Devuelve None si MS1 confirma que el paciente NO existe (HTTP 404).
         Lanza ServicioExternoNoDisponibleException si MS1 no responde
         (timeout/conexión rechazada) — ese caso se maneja distinto
-        (PENDIENTE_VALIDACION), no como "no existe".
+        (PENDIENTE_VALIDACION), no como "no existe". Lanza
+        CredencialesInvalidasException si MS1 responde 401 (incluso ese
+        caso hoy recibe el mismo tratamiento que "no disponible").
         """
         raise NotImplementedError

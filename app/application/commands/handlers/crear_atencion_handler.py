@@ -24,7 +24,10 @@ from datetime import datetime
 
 from app.application.dtos.atencion_command_dto import AtencionOutputDTO, CrearAtencionInputDTO
 from app.application.ports.evidencia_storage_port import EvidenciaStoragePort
-from app.application.ports.exceptions import ServicioExternoNoDisponibleException
+from app.application.ports.exceptions import (
+    CredencialesInvalidasException,
+    ServicioExternoNoDisponibleException,
+)
 from app.application.ports.paciente_client_port import PacienteClientPort
 from app.application.ports.personal_client_port import PersonalClientPort
 from app.domain.entities.atencion import Atencion
@@ -32,6 +35,8 @@ from app.domain.entities.evidencia_receta import EvidenciaReceta
 from app.domain.entities.medicamento import Medicamento
 from app.domain.repositories.atencion_command_repository import AtencionCommandRepository
 from app.domain.value_objects.diagnostico import Diagnostico
+from app.domain.value_objects.signos_vitales import SignosVitales
+from app.domain.value_objects.ubicacion import Ubicacion
 
 
 class CrearAtencionUseCase:
@@ -48,7 +53,7 @@ class CrearAtencionUseCase:
         self._personal_client = personal_client
         self._evidencia_storage = evidencia_storage
 
-    async def ejecutar(self, datos: CrearAtencionInputDTO) -> AtencionOutputDTO:
+    async def ejecutar(self, datos: CrearAtencionInputDTO, bearer_token: str) -> AtencionOutputDTO:
         # Idempotencia: si esta atención ya fue procesada antes (mismo
         # device_generated_id, típico de un reintento de batch desde el
         # celular), se devuelve la existente sin crear una nueva.
@@ -59,15 +64,43 @@ class CrearAtencionUseCase:
             if existente is not None:
                 return self._a_dto(existente)
 
+        signos_vitales = None
+        if any(
+            v is not None
+            for v in (
+                datos.presion_sistolica,
+                datos.presion_diastolica,
+                datos.temperatura,
+                datos.peso,
+                datos.estatura,
+                datos.glucosa,
+                datos.frecuencia_cardiaca,
+                datos.saturacion_oxigeno,
+            )
+        ):
+            signos_vitales = SignosVitales(
+                presion_sistolica=datos.presion_sistolica,
+                presion_diastolica=datos.presion_diastolica,
+                temperatura=datos.temperatura,
+                peso=datos.peso,
+                estatura=datos.estatura,
+                glucosa=datos.glucosa,
+                frecuencia_cardiaca=datos.frecuencia_cardiaca,
+                saturacion_oxigeno=datos.saturacion_oxigeno,
+            )
+
         atencion = Atencion(
             paciente_id=uuid.UUID(datos.paciente_id),
             personal_id=uuid.UUID(datos.personal_id),
             diagnostico=Diagnostico(
                 motivo_consulta=datos.motivo_consulta,
                 descripcion=datos.diagnostico_descripcion,
+                dias_evolucion_sintomas=datos.dias_evolucion_sintomas,
             ),
             fecha_atencion=datos.fecha_atencion,
+            ubicacion=Ubicacion(comunidad=datos.comunidad, municipio=datos.municipio),
             device_generated_id=datos.device_generated_id,
+            signos_vitales=signos_vitales,
         )
 
         for med in datos.medicamentos:
@@ -75,7 +108,7 @@ class CrearAtencionUseCase:
                 Medicamento(nombre=med.nombre, dosis=med.dosis, frecuencia=med.frecuencia, duracion=med.duracion)
             )
 
-        await self._validar_contra_ms1(atencion)
+        await self._validar_contra_ms1(atencion, bearer_token)
 
         if datos.evidencia_receta_base64:
             subida = await self._evidencia_storage.subir_evidencia(
@@ -88,15 +121,25 @@ class CrearAtencionUseCase:
         atencion_guardada = await self._atencion_repository.guardar(atencion)
         return self._a_dto(atencion_guardada)
 
-    async def _validar_contra_ms1(self, atencion: Atencion) -> None:
+    async def _validar_contra_ms1(self, atencion: Atencion, bearer_token: str) -> None:
         """
         Aplica la máquina de estados de tolerancia a fallos. Modifica
         `atencion` in-place (marca su estado) antes de persistir.
+
+        `bearer_token` es la credencial del personal médico que originó
+        la petición a MS2 — se reenvía a MS1 porque sus endpoints
+        también exigen Bearer y MS2 no tiene identidad de servicio
+        propia (ver PacienteClient/PersonalClient).
         """
         try:
-            paciente = await self._paciente_client.obtener_paciente(atencion.paciente_id)
-            personal = await self._personal_client.obtener_personal(atencion.personal_id)
-        except ServicioExternoNoDisponibleException:
+            paciente = await self._paciente_client.obtener_paciente(atencion.paciente_id, bearer_token)
+            personal = await self._personal_client.obtener_personal(atencion.personal_id, bearer_token)
+        except (ServicioExternoNoDisponibleException, CredencialesInvalidasException):
+            # Ambos casos reciben el mismo tratamiento: no se rechaza la
+            # atención por un problema ajeno a si el paciente/personal
+            # existen (MS1 caído, o el token expiró justo entre que el
+            # celular llamó a MS2 y MS2 llamó a MS1) — se revalida
+            # después.
             # TODO: encolar esta atención en un mecanismo de reintento
             # (ej. un job periódico que vuelva a llamar a _validar_contra_ms1
             # para todas las atenciones en estado PENDIENTE_VALIDACION).
@@ -113,19 +156,31 @@ class CrearAtencionUseCase:
     def _a_dto(atencion: Atencion) -> AtencionOutputDTO:
         from app.application.dtos.atencion_command_dto import MedicamentoInputDTO
 
+        sv = atencion.signos_vitales
         return AtencionOutputDTO(
             id=str(atencion.id),
             paciente_id=str(atencion.paciente_id),
             personal_id=str(atencion.personal_id),
             motivo_consulta=atencion.diagnostico.motivo_consulta,
             diagnostico_descripcion=atencion.diagnostico.descripcion,
+            dias_evolucion_sintomas=atencion.diagnostico.dias_evolucion_sintomas,
             fecha_atencion=atencion.fecha_atencion,
+            comunidad=atencion.ubicacion.comunidad,
+            municipio=atencion.ubicacion.municipio,
             estado=atencion.estado.value,
             medicamentos=[
                 MedicamentoInputDTO(nombre=m.nombre, dosis=m.dosis, frecuencia=m.frecuencia, duracion=m.duracion)
                 for m in atencion.medicamentos
             ],
             evidencia_url=atencion.evidencia_receta.url_imagen if atencion.evidencia_receta else None,
+            presion_sistolica=sv.presion_sistolica if sv else None,
+            presion_diastolica=sv.presion_diastolica if sv else None,
+            temperatura=sv.temperatura if sv else None,
+            peso=sv.peso if sv else None,
+            estatura=sv.estatura if sv else None,
+            glucosa=sv.glucosa if sv else None,
+            frecuencia_cardiaca=sv.frecuencia_cardiaca if sv else None,
+            saturacion_oxigeno=sv.saturacion_oxigeno if sv else None,
             creado_en=atencion.creado_en,
             actualizado_en=atencion.actualizado_en,
         )

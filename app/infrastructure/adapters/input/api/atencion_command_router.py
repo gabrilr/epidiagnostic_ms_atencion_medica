@@ -32,6 +32,10 @@ from app.infrastructure.adapters.input.api.atencion_schemas import (
     SincronizarAtencionesRequest,
     SincronizarAtencionesResponse,
 )
+from app.infrastructure.adapters.input.api.auth_dependencies import (
+    get_bearer_token_actual,
+    get_personal_id_actual,
+)
 from app.infrastructure.dependency_injection import (
     get_crear_atencion_use_case,
     get_modificar_atencion_use_case,
@@ -47,13 +51,24 @@ def _request_a_input_dto(request: CrearAtencionRequest) -> CrearAtencionInputDTO
         personal_id=request.personal_id,
         motivo_consulta=request.motivo_consulta,
         fecha_atencion=request.fecha_atencion,
+        comunidad=request.comunidad,
+        municipio=request.municipio,
         diagnostico_descripcion=request.diagnostico_descripcion,
+        dias_evolucion_sintomas=request.dias_evolucion_sintomas,
         medicamentos=[
             MedicamentoInputDTO(nombre=m.nombre, dosis=m.dosis, frecuencia=m.frecuencia, duracion=m.duracion)
             for m in request.medicamentos
         ],
         evidencia_receta_base64=request.evidencia_receta_base64,
         device_generated_id=request.device_generated_id,
+        presion_sistolica=request.presion_sistolica,
+        presion_diastolica=request.presion_diastolica,
+        temperatura=request.temperatura,
+        peso=request.peso,
+        estatura=request.estatura,
+        glucosa=request.glucosa,
+        frecuencia_cardiaca=request.frecuencia_cardiaca,
+        saturacion_oxigeno=request.saturacion_oxigeno,
     )
 
 
@@ -66,16 +81,19 @@ def _request_a_input_dto(request: CrearAtencionRequest) -> CrearAtencionInputDTO
 async def crear_atencion(
     request: CrearAtencionRequest,
     use_case: Annotated[CrearAtencionUseCase, Depends(get_crear_atencion_use_case)],
+    _personal_id: Annotated[UUID, Depends(get_personal_id_actual)],
+    bearer_token: Annotated[str, Depends(get_bearer_token_actual)],
 ) -> AtencionResponse:
     """
     Valida paciente_id y personal_id contra el Microservicio 1 de forma
-    tolerante a fallos: si MS1 no responde, la atención se crea igual
-    con estado `pendiente_validacion` (no se bloquea el registro). Ver
+    tolerante a fallos: si MS1 no responde (o rechaza el token
+    reenviado), la atención se crea igual con estado
+    `pendiente_validacion` (no se bloquea el registro). Ver
     EstadoAtencion para el detalle de la máquina de estados.
     """
     try:
         input_dto = _request_a_input_dto(request)
-        resultado = await use_case.ejecutar(input_dto)
+        resultado = await use_case.ejecutar(input_dto, bearer_token)
         return AtencionResponse(
             **{**resultado.__dict__, "medicamentos": [MedicamentoResponse(**m.__dict__) for m in resultado.medicamentos]}
         )
@@ -95,6 +113,8 @@ async def sincronizar_atenciones(
     use_case: Annotated[
         SincronizarAtencionesBatchUseCase, Depends(get_sincronizar_atenciones_batch_use_case)
     ],
+    _personal_id: Annotated[UUID, Depends(get_personal_id_actual)],
+    bearer_token: Annotated[str, Depends(get_bearer_token_actual)],
 ) -> SincronizarAtencionesResponse:
     """
     Procesa un lote de atenciones acumuladas en el celular durante
@@ -105,7 +125,7 @@ async def sincronizar_atenciones(
         dispositivo_id=request.dispositivo_id,
         atenciones=[_request_a_input_dto(a) for a in request.atenciones],
     )
-    resultados = await use_case.ejecutar(input_dto)
+    resultados = await use_case.ejecutar(input_dto, bearer_token)
     return SincronizarAtencionesResponse(
         resultados=[ResultadoSincronizacionAtencionResponse(**r.__dict__) for r in resultados]
     )
@@ -120,6 +140,7 @@ async def modificar_atencion(
     atencion_id: UUID,
     request: ModificarAtencionRequest,
     use_case: Annotated[ModificarAtencionUseCase, Depends(get_modificar_atencion_use_case)],
+    _personal_id: Annotated[UUID, Depends(get_personal_id_actual)],
 ) -> AtencionResponse:
     """
     PATCH parcial: solo se modifica lo que venga en el body distinto de

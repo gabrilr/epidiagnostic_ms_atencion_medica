@@ -3,6 +3,10 @@ Settings del Microservicio de Atención Médica.
 
 Además de la configuración de base de datos (igual patrón que MS1),
 incluye:
+- JWT_SECRET_KEY/JWT_ALGORITHM: DEBEN tener el mismo valor que en MS1.
+  MS2 no tiene su propio sistema de login — decodifica el mismo JWT que
+  emite MS1 (auth stateless, sin llamar de vuelta a MS1 para validar el
+  token, ver auth_dependencies.py).
 - La URL base del Microservicio 1, usada por los clientes HTTP
   (pacientes_client.py, personal_client.py) para validar paciente_id y
   personal_id.
@@ -22,6 +26,10 @@ class Settings(BaseSettings):
 
     database_url: str = "mysql+aiomysql://root:root@db:3306/atencion_medica_db"
     db_echo: bool = False
+
+    # JWT — mismo valor que JWT_SECRET_KEY/JWT_ALGORITHM en MS1.
+    jwt_secret_key: str = "cambia-este-secreto-en-produccion"
+    jwt_algorithm: str = "HS256"
 
     # URL del Microservicio 1 (Pacientes y Personal). Dentro de
     # docker-compose, si ambos microservicios comparten red, el host

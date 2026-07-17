@@ -13,6 +13,7 @@ from app.domain.entities.evidencia_receta import EvidenciaReceta
 from app.domain.entities.medicamento import Medicamento
 from app.domain.value_objects.diagnostico import Diagnostico
 from app.domain.value_objects.estado_atencion import EstadoAtencion
+from app.domain.value_objects.ubicacion import Ubicacion
 
 
 def _crear_atencion_valida() -> Atencion:
@@ -21,6 +22,7 @@ def _crear_atencion_valida() -> Atencion:
         personal_id=uuid.uuid4(),
         diagnostico=Diagnostico(motivo_consulta="Dolor abdominal"),
         fecha_atencion=datetime.utcnow() - timedelta(hours=1),
+        ubicacion=Ubicacion(comunidad="Suchiapa", municipio="Suchiapa"),
     )
 
 
@@ -38,6 +40,7 @@ def test_atencion_con_fecha_futura_lanza_excepcion():
             personal_id=uuid.uuid4(),
             diagnostico=Diagnostico(motivo_consulta="Dolor abdominal"),
             fecha_atencion=datetime.utcnow() + timedelta(days=1),
+            ubicacion=Ubicacion(comunidad="Suchiapa", municipio="Suchiapa"),
         )
 
 
@@ -106,12 +109,14 @@ def test_dos_atenciones_mismo_paciente_son_independientes():
         personal_id=uuid.uuid4(),
         diagnostico=Diagnostico(motivo_consulta="Consulta comunidad A"),
         fecha_atencion=datetime.utcnow() - timedelta(days=2),
+        ubicacion=Ubicacion(comunidad="Comunidad A", municipio="Suchiapa"),
     )
     atencion_2 = Atencion(
         paciente_id=paciente_id,
         personal_id=uuid.uuid4(),
         diagnostico=Diagnostico(motivo_consulta="Consulta comunidad B"),
         fecha_atencion=datetime.utcnow() - timedelta(hours=1),
+        ubicacion=Ubicacion(comunidad="Comunidad B", municipio="Suchiapa"),
     )
 
     assert atencion_1.id != atencion_2.id
