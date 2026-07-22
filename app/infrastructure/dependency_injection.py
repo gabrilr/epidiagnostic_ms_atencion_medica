@@ -45,13 +45,19 @@ from app.infrastructure.config.settings import get_settings
 
 settings = get_settings()
 
-# Cliente httpx compartido a nivel de módulo: reutiliza el pool de
+# Clientes httpx compartidos a nivel de módulo: reutilizan el pool de
 # conexiones entre requests en vez de abrir una conexión TCP nueva por
-# cada llamada a MS1, lo cual sería costoso en alta frecuencia de
-# sincronización batch.
+# cada llamada, lo cual sería costoso en alta frecuencia de
+# sincronización batch. Dos clientes separados porque, desde la
+# separación en 4 microservicios, paciente_id y personal_id se validan
+# contra servicios distintos (ms-pacientes y ms-personal).
 _http_client_ms_pacientes = httpx.AsyncClient(
     base_url=settings.ms_pacientes_base_url,
     timeout=settings.ms_pacientes_timeout_seconds,
+)
+_http_client_ms_personal = httpx.AsyncClient(
+    base_url=settings.ms_personal_base_url,
+    timeout=settings.ms_personal_timeout_seconds,
 )
 
 
@@ -72,7 +78,7 @@ def get_paciente_client() -> PacienteClientPort:
 
 
 def get_personal_client() -> PersonalClientPort:
-    return PersonalClient(_http_client_ms_pacientes)
+    return PersonalClient(_http_client_ms_personal)
 
 
 def get_evidencia_storage() -> EvidenciaStoragePort:
